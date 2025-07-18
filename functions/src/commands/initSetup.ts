@@ -83,7 +83,10 @@ export class InitSetupCommand extends Command {
                     checkedCount++;
                     const parsed = await parseWordleSummary(msg.content, guildMembers);
                     if (parsed) {
-                        await storeWordleResult(new Date(msg.timestamp), parsed);
+                        // Store as the previous day's Wordle (match trackWordleResults logic)
+                        const msgDate = new Date(msg.timestamp);
+                        const prevDay = new Date(msgDate.getTime() - 24 * 60 * 60 * 1000);
+                        await storeWordleResult(prevDay, parsed);
                         storedCount++;
                     }
                 }

@@ -34,7 +34,7 @@ export interface GuildMember {
  * @returns True if the message looks like a Wordle summary
  */
 export function isWordleSummary(content: string): boolean {
-  return content.includes("day streak") && content.includes("Wordle");
+  return content.includes("day streak") && content.includes("yesterday's results");
 }
 
 /**
@@ -67,7 +67,10 @@ export async function parseWordleSummary(content: string, guildMembers: GuildMem
  * Parses the streak number from the first line of a summary.
  */
 function parseStreak(line: string): number | null {
-  const streakMatch = line.match(/on a (\d+) day streak/);
+  // Remove markdown and emojis
+  const cleanLine = line.replace(/[*_~`]/g, '').replace(/🔥|👑/g, '');
+  // Match 'on a 10 day streak' or 'on an 8 day streak', case-insensitive
+  const streakMatch = cleanLine.match(/on an? (\d+) day streak/i);
   return streakMatch ? parseInt(streakMatch[1], 10) : null;
 }
 
@@ -77,7 +80,8 @@ function parseStreak(line: string): number | null {
 function parseResults(lines: string[], guildMembers: GuildMember[]): WordleResult[] {
   const results: WordleResult[] = [];
   for (const line of lines) {
-    const resultMatch = line.match(/^(?:\ud83d\udc51 )?([X\d])\/6: (.+)$/);
+    // Match lines like: '👑 2/6: @User1 @User2', '4/6: @User3', 'X/6: @User4'
+    const resultMatch = line.match(/^(?:👑 )?([X\d])\/6: (.+)$/u);
     if (resultMatch) {
       let score: number;
       if (resultMatch[1] === 'X') {
