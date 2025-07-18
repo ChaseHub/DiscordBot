@@ -188,6 +188,7 @@ export const registerCommands = onRequest(
  */
 export const fetchWordleResults = onSchedule({
     schedule: "0 6 * * *",
+    timeZone: "America/Chicago", 
     secrets: [DISCORD_BOT_TOKEN],
 }, async (event) => {
     const token = DISCORD_BOT_TOKEN.value();
