@@ -35,7 +35,7 @@ A Firebase Cloud Functions-powered Discord bot for tracking, aggregating, and vi
 
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/yourusername/discord-wordle-bot.git
+   git clone https://github.com/ChaseHub/discord-wordle-bot.git
    cd discord-wordle-bot/functions
    ```
 
