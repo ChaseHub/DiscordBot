@@ -1,16 +1,27 @@
+// Parses Wordle summary messages and extracts results for storage and stats.
+
+/**
+ * Represents a single user's Wordle result.
+ */
 export interface WordleResult {
-  id: string | null;
-  username?: string;
-  score: number; // -1 for fail, 1-6 for success
+  id: string | null;      // Discord user ID (null if not found)
+  username?: string;      // Username (if available)
+  score: number;          // -1 for fail, 1-6 for success
 }
 
+/**
+ * Parsed summary of a Wordle message (streak, results, solved/unsolved counts).
+ */
 export interface ParsedWordleSummary {
-  streak: number | null;
-  results: WordleResult[];
-  solved: number | null;
-  unsolved: number | null;
+  streak: number | null;      // User's streak (if present)
+  results: WordleResult[];    // List of results parsed from the message
+  solved: number | null;      // Number of solved games (if present)
+  unsolved: number | null;    // Number of unsolved games (if present)
 }
 
+/**
+ * Represents a Discord guild member (for username lookup).
+ */
 export interface GuildMember {
   user: { id: string; username: string };
   nick?: string;
@@ -18,14 +29,16 @@ export interface GuildMember {
 }
 
 /**
- * Checks if a message content is a Wordle summary.
+ * Checks if a message content is a Wordle summary (basic heuristic).
+ * @param content The message content
+ * @returns True if the message looks like a Wordle summary
  */
 export function isWordleSummary(content: string): boolean {
-  return content.includes("day streak") && content.includes("yesterday's results");
+  return content.includes("day streak") && content.includes("Wordle");
 }
 
 /**
- * Parses a Wordle summary message.
+ * Parses a Wordle summary message and extracts results.
  * @param content The message content
  * @param guildMembers Array of guild member objects for username lookup
  * @returns ParsedWordleSummary or null if parsing fails
@@ -50,11 +63,17 @@ export async function parseWordleSummary(content: string, guildMembers: GuildMem
 
 // --- Private helpers ---
 
+/**
+ * Parses the streak number from the first line of a summary.
+ */
 function parseStreak(line: string): number | null {
   const streakMatch = line.match(/on a (\d+) day streak/);
   return streakMatch ? parseInt(streakMatch[1], 10) : null;
 }
 
+/**
+ * Parses all user results from the summary lines.
+ */
 function parseResults(lines: string[], guildMembers: GuildMember[]): WordleResult[] {
   const results: WordleResult[] = [];
   for (const line of lines) {
@@ -107,6 +126,9 @@ function parseResults(lines: string[], guildMembers: GuildMember[]): WordleResul
   return results;
 }
 
+/**
+ * Parses solved/unsolved counts from the summary lines.
+ */
 function parseSolvedUnsolved(lines: string[]): { solved: number | null; unsolved: number | null } {
   let solved: number | null = null, unsolved: number | null = null;
   for (const line of lines) {

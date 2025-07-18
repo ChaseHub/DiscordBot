@@ -1,49 +1,60 @@
-// src/aggregateStats.ts
+// Aggregates and summarizes Wordle results for stats and reporting.
 
 import { getFirestore } from "firebase-admin/firestore";
 import { WordleResult } from "./parseWordleSummary";
 
-// --- EXPANDED INTERFACES ---
-
+/**
+ * User statistics for Wordle games.
+ */
 export interface UserStats {
-  id: string;
-  username: string; // Store username directly
-  gamesPlayed: number;
-  gamesSolved: number;
-  winRate: number;
-  averageScore: number | null;
-  currentStreak: number;
-  maxStreak: number;
-  distribution: Record<string, number>;
-  guessCounts: Record<number, number>; // NEW: number of solves for each guess (1-6)
+  id: string;                   // Discord user ID
+  username: string;             // Username or nickname
+  gamesPlayed: number;          // Total games played
+  gamesSolved: number;          // Games solved (not failed)
+  winRate: number;              // Fraction of games solved
+  averageScore: number | null;  // Average number of guesses (lower is better)
+  currentStreak: number;        // Current win streak
+  maxStreak: number;            // Longest win streak
+  distribution: Record<string, number>; // Guess distribution (1-6, -1 for fail)
+  guessCounts: Record<number, number>;  // Number of solves for each guess count
 }
 
+/**
+ * Summary of results for a single Wordle day.
+ */
 export interface DailySummary {
-  date: string;
-  wordleNumber?: number; // Optional Wordle puzzle number
-  totalPlayers: number;
-  successRate: number;
-  averageScore: number | null;
-  distribution: Record<string, number>;
-  winners: WordleResult[];
-  results: WordleResult[];
+  date: string;                 // Date (YYYY-MM-DD)
+  wordleNumber?: number;        // Optional Wordle puzzle number
+  totalPlayers: number;         // Number of players who submitted results
+  successRate: number;          // Percentage of players who solved
+  averageScore: number | null;  // Average score for the day
+  distribution: Record<string, number>; // Guess distribution for the day
+  winners: WordleResult[];      // List of users who solved
+  results: WordleResult[];      // All results (including fails)
 }
 
+/**
+ * Leaderboards for all-time stats.
+ */
 export interface AllTimeLeaderboards {
   longestStreak: UserStats[];
   bestWinRate: UserStats[];
   bestAverageScore: UserStats[]; 
 }
 
+/**
+ * Aggregated stats for the server (daily + all-time).
+ */
 export interface AggregatedStats {
   dailySummary: DailySummary | null;
   userStats: Record<string, UserStats>;
   allTimeLeaderboards: AllTimeLeaderboards;
 }
 
-
 /**
  * Aggregates all Wordle results from Firestore into a comprehensive stats object.
+ * @param userIdToName Map of user IDs to usernames
+ * @returns AggregatedStats object with daily and all-time stats
  */
 export async function aggregateWordleStats(userIdToName: Record<string, string>): Promise<AggregatedStats> {
   const firestore = getFirestore();
@@ -56,7 +67,7 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
   const allResultsByDate: Record<string, { results: WordleResult[], wordleNumber?: number }> = {};
   const userGameHistory: Record<string, { date: string, score: number | null }[]> = {};
 
-  // First pass: Organize all data by date and user
+  // Organize all data by date and user
   snapshot.forEach(doc => {
     const data = doc.data();
     const date = (data.date.toDate ? data.date.toDate() : new Date(data.date)).toISOString().slice(0, 10);
@@ -65,9 +76,8 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
     allResultsByDate[date] = { results, wordleNumber: data.wordleNumber };
 
     for (const result of results) {
-      // Handle the case where result.id is null or undefined
+      // Skip if user ID is missing
       if (result.id == null) {
-        // Optionally log or skip, here we skip
         continue;
       }
       if (!userGameHistory[result.id]) userGameHistory[result.id] = [];
@@ -75,7 +85,7 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
     }
   });
 
-  // Second pass: Calculate detailed stats for each user
+  // Calculate detailed stats for each user
   const userStats: Record<string, UserStats> = {};
   for (const userId in userGameHistory) {
     const games = userGameHistory[userId].sort((a, b) => a.date.localeCompare(b.date)); // Chronological order
@@ -91,7 +101,7 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
     });
     distribution['-1'] = games.length - solvedGames.length;
 
-    // Streak Calculation
+    // Calculate streaks
     let currentStreak = 0;
     let maxStreak = 0;
     if (games.length > 0) {
@@ -101,7 +111,7 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
       // Check if the last game was today or yesterday to be part of a current streak
       const lastGame = games[games.length - 1];
       if (lastGame.score !== -1 && (lastGame.date === today || lastGame.date === yesterday)) {
-        // Calculate current streak by walking backwards
+        // Walk backwards to count streak
         currentStreak = 1;
         for (let i = games.length - 2; i >= 0; i--) {
           const dayDiff = (new Date(games[i + 1].date).getTime() - new Date(games[i].date).getTime()) / 86400000;
@@ -132,7 +142,6 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
       }
     }
 
-
     userStats[userId] = {
       id: userId,
       username: userIdToName[userId] || `User...${userId.slice(-4)}`,
@@ -143,7 +152,7 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
       distribution,
       currentStreak,
       maxStreak,
-      guessCounts, // NEW
+      guessCounts,
     };
   }
 
@@ -171,7 +180,7 @@ export async function aggregateWordleStats(userIdToName: Record<string, string>)
 
   // Generate All-Time Leaderboards
   const statsList = Object.values(userStats);
-  const qualifiedPlayers = statsList.filter(s => s.gamesPlayed); // Leaderboards for experienced players
+  const qualifiedPlayers = statsList.filter(s => s.gamesPlayed);
 
   const allTimeLeaderboards: AllTimeLeaderboards = {
     longestStreak: [...statsList].sort((a, b) => b.maxStreak - a.maxStreak).slice(0, 5),

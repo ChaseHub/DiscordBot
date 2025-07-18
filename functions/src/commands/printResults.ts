@@ -1,3 +1,6 @@
+// Implements the /printresults command for the Wordle bot.
+// Posts the current day's Wordle infographic to the channel.
+
 import { InteractionResponseType } from "discord-interactions";
 import { Command, CommandData } from "./command";
 import { aggregateWordleStats } from "../wordle-results-tracker/aggregateStats";
@@ -5,6 +8,9 @@ import { postResultsInfographic } from "../wordle-results-tracker/resultsInfogra
 import { fetchGuildMembers } from "../wordle-results-tracker/guildMembers";
 import { WORDLE_CHANNEL_ID, GUILD_ID } from "../index";
 
+/**
+ * The /printresults command posts the latest Wordle infographic to the channel.
+ */
 export class PrintResultsCommand extends Command {
     public data: CommandData = {
         name: "printresults",
@@ -12,6 +18,12 @@ export class PrintResultsCommand extends Command {
         type: 1, // CHAT_INPUT
     };
 
+    /**
+     * Posts the Wordle infographic for the current data in Firestore.
+     * @param interaction Discord interaction object
+     * @param res Response object
+     * @param token Discord bot token
+     */
     async execute(interaction: any, res: any, token: string) {
         try {
             // Use hardcoded channel and guild IDs

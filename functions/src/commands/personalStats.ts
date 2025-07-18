@@ -1,3 +1,6 @@
+// Implements the /personalstats command for the Wordle bot.
+// Shows a user's personal Wordle statistics in an embed.
+
 import { InteractionResponseType } from "discord-interactions";
 import { APIEmbed } from "discord-api-types/v10";
 import { Command, CommandData } from "./command";
@@ -5,6 +8,9 @@ import { aggregateWordleStats } from "../wordle-results-tracker/aggregateStats";
 import { fetchGuildMembers } from "../wordle-results-tracker/guildMembers";
 import { GUILD_ID } from "../index";
 
+/**
+ * The /personalstats command displays a user's Wordle stats (games played, win rate, streaks, etc).
+ */
 export class PersonalStatsCommand extends Command {
     public data: CommandData = {
         name: "personalstats",
@@ -12,6 +18,12 @@ export class PersonalStatsCommand extends Command {
         type: 1, // CHAT_INPUT
     };
 
+    /**
+     * Looks up and displays the selected user's Wordle stats.
+     * @param interaction Discord interaction object
+     * @param res Response object
+     * @param token Discord bot token
+     */
     async execute(interaction: any, res: any, token: string) {
         try {
             const userId = interaction.data.options?.find((opt: any) => opt.name === "user")?.value;

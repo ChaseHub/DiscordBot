@@ -1,3 +1,6 @@
+// Main entry point for the Discord Wordle Results Tracker Bot
+// Handles Discord interactions, command registration, and scheduled Wordle result aggregation.
+
 import { onRequest } from "firebase-functions/v2/https";
 import { InteractionType, InteractionResponseType, verifyKey } from "discord-interactions";
 import { defineSecret } from "firebase-functions/params";
@@ -10,12 +13,14 @@ import { PersonalStatsCommand } from "./commands/personalStats";
 import { PrintResultsCommand } from "./commands/printResults";
 import { HelpCommand } from "./commands/help";
 
+// Initialize Firebase Admin SDK
 initializeApp();
 
-// Add your channel ID here
+// Discord channel and server IDs (set these to your server's values)
 export const WORDLE_CHANNEL_ID = "1223013428365492236"; // Replace with your channel ID
 export const GUILD_ID = "1223013427371446453"; // Set your Discord server ID here
 
+// List of all available slash commands
 const commands: Command[] = [
     new InitSetupCommand(),
     new PersonalStatsCommand(),
@@ -24,14 +29,15 @@ const commands: Command[] = [
     // Add new Command instances here
 ];
 
-// Define secrets and parameters
+// Define secrets for Discord and admin credentials
 const DISCORD_PUBLIC_KEY = defineSecret("DISCORD_PUBLIC_KEY");
 const DISCORD_BOT_TOKEN = defineSecret("DISCORD_BOT_TOKEN");
 const DISCORD_APPLICATION_ID = defineSecret("DISCORD_APPLICATION_ID");
 const ADMIN_PASSWORD = defineSecret("ADMIN_PASSWORD");
 
 /**
- * The main function that handles all incoming interactions from Discord.
+ * Main HTTP endpoint for Discord interactions (slash commands, pings, etc).
+ * Verifies requests, routes to the correct command, and handles errors.
  */
 export const handleInteraction = onRequest(
     { secrets: [DISCORD_PUBLIC_KEY, DISCORD_BOT_TOKEN] },
@@ -84,13 +90,14 @@ export const handleInteraction = onRequest(
             }
         }
 
-        // Handle different interaction types
+        // Handle Discord PING (for verification)
         if (interaction.type === InteractionType.PING) {
             console.log("Handling Ping request");
             res.send({ type: InteractionResponseType.PONG });
             return;
         }
 
+        // Handle slash commands
         if (interaction.type === InteractionType.APPLICATION_COMMAND) {
             const commandName = interaction.data?.name?.toLowerCase?.();
             const command = commands.find(cmd => cmd.data.name === commandName);
@@ -114,6 +121,7 @@ export const handleInteraction = onRequest(
             }
         }
 
+        // Unknown interaction type
         console.error("Unknown Interaction type");
         res.status(400).send({ error: "Unknown Interaction type" });
         return;
@@ -121,10 +129,10 @@ export const handleInteraction = onRequest(
 );
 
 /**
- * A separate function to register all your slash commands with Discord.
- * You only need to run this once or whenever you update your commands.
+ * HTTP endpoint to register all slash commands with Discord.
+ * Only needs to be called when commands are added or updated.
+ * Requires admin password (via query, header, or body).
  */
-// You can use an environment variable or a Firebase secret for the admin password
 export const registerCommands = onRequest(
     { secrets: [DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID, ADMIN_PASSWORD] },
     async (req, res) => {
@@ -144,8 +152,7 @@ export const registerCommands = onRequest(
         }
 
         // The URL to PUT the commands to.
-        // Note: If you want to register commands for a specific server (guild) for testing,
-        // use `/guilds/<GUILD_ID>/commands` instead of the global `/commands`.
+        // Use /guilds/<GUILD_ID>/commands for server-specific registration (faster propagation)
         const url = `https://discord.com/api/v10/applications/${applicationId}/commands`;
 
         try {
@@ -175,6 +182,10 @@ export const registerCommands = onRequest(
     }
 );
 
+/**
+ * Scheduled function to fetch and aggregate Wordle results every morning at 6am.
+ * Posts the daily infographic to the configured Discord channel.
+ */
 export const fetchWordleResults = onSchedule({
     schedule: "0 6 * * *",
     secrets: [DISCORD_BOT_TOKEN],

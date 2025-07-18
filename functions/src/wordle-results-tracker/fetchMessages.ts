@@ -1,17 +1,23 @@
-// Fetches messages from a Discord channel since a given date, paginating as needed
+// Fetches messages from a Discord channel since a given date, handling pagination and rate limits.
+
 import { MESSAGE_FETCH_LIMIT } from "./constants";
+
+/**
+ * Represents a Discord message object.
+ */
 export interface DiscordMessage {
-  id: string;
-  content: string;
-  timestamp: string;
+  id: string;           // Message ID
+  content: string;      // Message text content
+  timestamp: string;    // ISO timestamp
   [key: string]: any;
 }
 
 /**
  * Fetch all messages from a Discord channel since a given date.
+ * Handles pagination and Discord rate limits.
  * @param channelId Discord channel ID
- * @param token Bot token
- * @param since Date to fetch messages since
+ * @param token Discord bot token
+ * @param since Only fetch messages after this date
  * @returns Array of Discord messages
  */
 export async function fetchMessages(channelId: string, token: string, since: Date): Promise<DiscordMessage[]> {

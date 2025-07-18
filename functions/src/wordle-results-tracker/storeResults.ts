@@ -1,10 +1,12 @@
+// Handles storing parsed Wordle results in Firestore, with deduplication.
+
 import { getFirestore } from "firebase-admin/firestore";
 import { ParsedWordleSummary } from "./parseWordleSummary";
 
 /**
- * Store a parsed Wordle result in Firestore, avoiding duplicates.
- * @param date The date of the result (from message timestamp)
- * @param parsed The parsed Wordle summary
+ * Stores a parsed Wordle result in Firestore, avoiding duplicates for the same day.
+ * @param date The date to store the result under (should be the Wordle day, not message day)
+ * @param parsed The parsed Wordle summary object
  */
 export async function storeWordleResult(date: Date, parsed: ParsedWordleSummary): Promise<void> {
   const firestore = getFirestore();
@@ -18,7 +20,7 @@ export async function storeWordleResult(date: Date, parsed: ParsedWordleSummary)
     }))
   };
   try {
-    // Deduplication: check if a result with the same date string and user IDs exists
+    // Check for duplicates: same date and user IDs
     const snapshot = await firestore.collection("wordleResults")
       .where("date", "==", dateString)
       .get();

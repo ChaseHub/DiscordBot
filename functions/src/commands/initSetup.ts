@@ -1,3 +1,6 @@
+// Implements the /initsetup command for the Wordle bot.
+// Allows admins to import historical Wordle data into Firestore.
+
 import { InteractionResponseType } from "discord-interactions";
 import { Command, CommandData } from "./command";
 import { fetchMessages } from "../wordle-results-tracker/fetchMessages";
@@ -6,6 +9,10 @@ import { isWordleSummary, parseWordleSummary } from "../wordle-results-tracker/p
 import { storeWordleResult } from "../wordle-results-tracker/storeResults";
 import { WORDLE_CHANNEL_ID, GUILD_ID } from "../index";
 
+/**
+ * The /initsetup command imports Wordle results from a given date up to now.
+ * Useful for first-time setup or backfilling data.
+ */
 export class InitSetupCommand extends Command {
     public data: CommandData = {
         name: "initsetup",
@@ -21,6 +28,12 @@ export class InitSetupCommand extends Command {
         ]
     };
 
+    /**
+     * Executes the import process, fetching messages and storing results.
+     * @param interaction Discord interaction object
+     * @param res Response object
+     * @param token Discord bot token
+     */
     async execute(interaction: any, res: any, token: string) {
         try {
             const dateStr = interaction.data.options?.find((opt: any) => opt.name === "date")?.value;

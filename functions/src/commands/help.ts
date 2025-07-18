@@ -1,7 +1,13 @@
+// Implements the /help command for the Wordle bot.
+// Shows a guide to all available commands and their usage.
+
 import { InteractionResponseType } from "discord-interactions";
 import { APIEmbed } from "discord-api-types/v10";
 import { Command, CommandData } from "./command";
 
+/**
+ * The /help command provides a list of all available Wordle bot commands and usage examples.
+ */
 export class HelpCommand extends Command {
     public data: CommandData = {
         name: "help",
@@ -9,6 +15,9 @@ export class HelpCommand extends Command {
         type: 1, // CHAT_INPUT
     };
 
+    /**
+     * Sends an embed with command usage instructions to the user.
+     */
     async execute(interaction: any, res: any) {
         const embed: APIEmbed = {
             color: 0x57F287,

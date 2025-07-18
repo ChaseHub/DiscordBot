@@ -1,21 +1,11 @@
+// Builds and posts the Wordle results infographic to Discord.
+// Includes daily summary, full scoreboard, and all-time leaderboards.
+
 import { ComponentType, RESTPostAPIChannelMessageJSONBody, APIEmbed, APIActionRowComponent, APIButtonComponent, ButtonStyle } from "discord-api-types/v10";
 import { AggregatedStats, DailySummary, UserStats } from "./aggregateStats";
 import { WordleResult } from "./parseWordleSummary";
 import { getMostCommonScore, getResultEmoji } from "./formatUtils";
 
-/**
- * Discord embed limits (as of 2024):
- * - Max 10 embeds per message
- * - Max 25 fields per embed
- * - Max 6000 characters per message
- * - Max 256 characters for embed title
- * - Max 1024 characters for embed field name/value
- * - Max 4096 characters for embed description
- * - Max 200 characters for footer text
- * - Max 5 action rows per message
- * - Max 5 buttons per action row
- * See: https://discord.com/developers/docs/resources/channel#create-message
- */
 /**
  * Posts the Wordle results infographic to a Discord channel.
  * @param channelId Discord channel ID
@@ -57,6 +47,10 @@ export async function postResultsInfographic(
   }
 }
 
+/**
+ * Builds the Discord message payload for the Wordle infographic.
+ * Includes daily summary, full scoreboard, and leaderboards.
+ */
 function buildResultsInfographic(stats: AggregatedStats, userIdToName: Record<string, string>): RESTPostAPIChannelMessageJSONBody {
   const { dailySummary, userStats } = stats;
 
@@ -96,8 +90,9 @@ function buildResultsInfographic(stats: AggregatedStats, userIdToName: Record<st
   };
 }
 
-
-// --- 1. DAILY SUMMARY EMBED BUILDER ---
+/**
+ * Builds the daily summary embed (top players, stats, guess distribution).
+ */
 function buildDailySummaryEmbed(summary: DailySummary, userStats: Record<string, UserStats>): APIEmbed {
   const sortedWinners = [...summary.winners].sort((a, b) => (a.score as number) - (b.score as number));
   const topPlayerResult = sortedWinners[0];
@@ -140,8 +135,9 @@ function buildDailySummaryEmbed(summary: DailySummary, userStats: Record<string,
   };
 }
 
-
-// --- 2. FULL DAILY RESULTS EMBED BUILDER ---
+/**
+ * Builds the full scoreboard embed for the day.
+ */
 function buildFullResultsEmbed(summary: DailySummary, userStats: Record<string, UserStats>): APIEmbed {
     // Sort all players: solved first (by score), then unsolved
     const sortedResults = [...summary.results].sort((a, b) => {
@@ -164,8 +160,9 @@ function buildFullResultsEmbed(summary: DailySummary, userStats: Record<string, 
     };
 }
 
-
-// --- 3. ALL-TIME LEADERBOARD EMBED BUILDER ---
+/**
+ * Builds the all-time leaderboard embed.
+ */
 function buildLeaderboardEmbed(allUserStats: UserStats[]): APIEmbed {
     // --- NEW: Most Solves by Guess Count ---
     const mostSolvesByGuess: string[] = [];
@@ -215,8 +212,9 @@ function buildLeaderboardEmbed(allUserStats: UserStats[]): APIEmbed {
     };
 }
 
-
-// --- ADVANCED LEADERBOARD FORMATTER WITH TIE-HANDLING ---
+/**
+ * Helper to format leaderboard categories (handles ties, medals, etc).
+ */
 function formatLeaderboardCategory(
     stats: UserStats[],
     valueExtractor: (s: UserStats) => number | null,
@@ -260,9 +258,11 @@ function formatLeaderboardCategory(
     return leaderboardText.trim() || "*Not enough data yet.*";
 }
 
+// --- Formatting utilities for podium, stats, and fun facts ---
 
-// --- OTHER FORMATTING UTILITIES (Mostly unchanged, with minor tweaks) ---
-
+/**
+ * Formats the top 3 players for the podium.
+ */
 function formatPodium(winners: WordleResult[], userStats: Record<string, UserStats>): string {
   const medals = ["🥇", "🥈", "🥉"];
   return winners.slice(0, 3)
@@ -270,6 +270,9 @@ function formatPodium(winners: WordleResult[], userStats: Record<string, UserSta
     .join("\n") || "*No successful solves today.*";
 }
 
+/**
+ * Formats the daily statistics section.
+ */
 function formatDailyStats(summary: DailySummary): string {
   return [
     `**Success Rate**: ${summary.successRate.toFixed(1)}%`,
@@ -278,6 +281,9 @@ function formatDailyStats(summary: DailySummary): string {
   ].join("\n");
 }
 
+/**
+ * Creates a text-based bar chart for guess distribution.
+ */
 function createDistributionChart(distribution: Record<string, number>, totalPlayers: number): string {
   const barLength = 12;
   let chart = "```ansi\n";
@@ -298,14 +304,9 @@ function createDistributionChart(distribution: Record<string, number>, totalPlay
   return chart;
 }
 
-// getResultEmoji is imported from formatUtils.ts
-// Emoji meanings:
-//   ❌  = Fail (-1)
-//   🎯  = Solved in 1 guess
-//   ✅  = Solved in 2-3 guesses
-//   👍  = Solved in 4-5 guesses
-//   😅  = Solved in 6 guesses
-//   🤔  = Unknown/other
+/**
+ * Generates a fun fact for the daily summary footer.
+ */
 function getFunFact(summary: DailySummary): string {
   const oneTry = summary.distribution['1'] || 0;
   if (oneTry > 0) return `Someone got a hole-in-one yesterday! Incredible!`;
